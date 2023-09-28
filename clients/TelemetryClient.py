@@ -16,7 +16,7 @@ class TelemetryClient:
                 if not data:
                     print("Connection closed by the server")
                     break
-                print(f'Received: {data.decode()}')
+                print(f'{data.decode()}')
         except asyncio.CancelledError:
             pass
         finally:

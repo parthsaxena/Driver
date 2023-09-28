@@ -3,7 +3,7 @@ import asyncio
 from PowerSupplyComm import PowerSupplyComm
 
 # Constants
-DATA_COLLECTION_FREQUENCY = 10
+DATA_COLLECTION_FREQUENCY = 50
 BROADCAST_FREQUENCY = 10
 
 class TelemetryServer:
@@ -25,17 +25,24 @@ class TelemetryServer:
             await asyncio.sleep(1 / DATA_COLLECTION_FREQUENCY)
 
     async def broadcast_telemetry(self):
+        latest_telemetry = None
         while True:
             if len(self.clients) > 0:                               
+                # Pop all older telemetry data until latest
                 while self.queue.qsize() > 1:
                     await self.queue.get()
+                
+                # Get latest telemetry if available
+                if self.queue.qsize() != 0:
+                    latest_telemetry = await self.queue.get()                
+                
+                # Convert telemetry dict to JSON
+                telemetry_data = json.dumps(latest_telemetry)
 
-                telemetry_dict = await self.queue.get()
-                # print(f"got latest data {telemetry_dict}")
-                telemetry_data = json.dumps(telemetry_dict)
-
+                # Store disconnected clients while broadcasting
                 disconnected_clients = []
 
+                # Broadcast data to each client
                 for client in self.clients:                
                     # Attempt to write telemetry data to client
                     try:
@@ -45,6 +52,7 @@ class TelemetryServer:
                         print(f"Telemetry client disconnected: {client.get_extra_info('peername')}")
                         disconnected_clients.append(client)
                 
+                # Remove each client that is disconnected
                 for client in disconnected_clients:                 
                     self.clients.remove(client)
                     try:
