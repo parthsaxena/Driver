@@ -5,6 +5,7 @@ class TelemetryClient:
     def __init__(self, host, port):
         self.host = host
         self.port = port
+        self.count = 0
 
     async def connect(self):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
@@ -16,7 +17,8 @@ class TelemetryClient:
                 if not data:
                     print("Connection closed by the server")
                     break
-                print(f'{data.decode()}')
+                print(f'[{self.count}] {data.decode()}')
+                self.count += 1
         except asyncio.CancelledError:
             pass
         finally:
