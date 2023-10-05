@@ -4,8 +4,8 @@ from PowerSupplyComm import PowerSupplyComm
 from termcolor import colored
 
 # Constants
-DATA_COLLECTION_FREQUENCY = 50
-BROADCAST_FREQUENCY = 200
+DATA_COLLECTION_FREQUENCY = 120
+BROADCAST_FREQUENCY = 20
 
 class TelemetryServer:
     def __init__(self, power_supply_comm):
@@ -17,12 +17,14 @@ class TelemetryServer:
         addr = writer.get_extra_info('peername')
         print(colored("[TelemetryServer]", 'red', attrs=['bold']), f'Telemetry server received connection from {addr}')
 
-    async def collect_data(self):
+    async def collect_data(self):        
         while True:
+            # Read from power supply
             telemetry_dict = await self.power_supply_comm.get_telemetry()
             if telemetry_dict:
                 await self.queue.put(telemetry_dict)
             
+            # Wait according to collection frequency
             await asyncio.sleep(1 / DATA_COLLECTION_FREQUENCY)
 
     async def broadcast_telemetry(self):
@@ -72,7 +74,7 @@ class TelemetryServer:
         loop = asyncio.get_event_loop()
         self.queue = asyncio.Queue()
 
-        # spawn data collectio & broadcast tasks
+        # Spawn data collectio & broadcast tasks
         collection_task = loop.create_task(self.collect_data())
         broadcast_task = loop.create_task(self.broadcast_telemetry())
 

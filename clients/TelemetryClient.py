@@ -37,7 +37,7 @@ class TelemetryClient:
                     digits = 3
 
                 prefix = colored(f'[{self.count}]', 'red', attrs=['bold', 'underline'])
-                latency = f'{colored("Avg. Latency:", "green")} {colored(str(round(average_latency / (1e9), digits)) + "ms", "green", attrs=["bold"])}'
+                latency = f'{colored("Avg. Latency:", "green")} {colored(str(round(average_latency / (1e9), digits)) + "s", "green", attrs=["bold"])}'
                 print(f'{prefix} {data.decode()}   {latency}')                    
                 
         except asyncio.CancelledError:

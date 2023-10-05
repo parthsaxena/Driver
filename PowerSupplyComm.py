@@ -13,13 +13,12 @@ class PowerSupplyComm:
         self.reader = None
         self.writer = None
 
-        # commanded variables
+        # Commanded variables
         self.commanded_voltage = -1.0
         self.commanded_current = -1.0
         self.enabled = False
 
-        # lock to ensure R/W transactions don't occur simultaneously        
-        # self.lock = asyncio.Lock()
+        # Lock to ensure R/W transactions don't occur concurrently                
         self.lock = lock
 
     async def connect(self):
@@ -28,22 +27,18 @@ class PowerSupplyComm:
         print(colored("[PowerSupplyComm]", 'cyan', attrs=['bold']), f"Connected to power supply at {colored(self.port, 'white', 'on_cyan')}")
 
     async def disconnect(self):
-        # check if we are connected
+        # Check if we are connected first
         if self.writer:
             self.writer.close()
             await self.writer.wait_closed()
 
     async def send_command(self, command):
-        """
-        Sends an SCPI command to the power supply
-        """
-
         async with self.lock:
-            # make sure we are connected
+            # Make sure we are connected
             if self.writer is None:
                 raise Exception("No connection to power supply.")
             
-            # write to socket
+            # Write to socket / wait until write buffer clears
             self.writer.write((command + '\n').encode())            
             await self.writer.drain()
                         
@@ -55,17 +50,15 @@ class PowerSupplyComm:
                 return "ERR"        
     
     async def get_telemetry(self):
-        """
-        Retrieves telemetry data from power supply.
-        Assumes SCPI commands 'SOUR:VOLT?' and 'SOUR:CURR?'
-        """                
-
+        # Send commands to get voltage and current
         voltage = await self.send_command('SOUR:VOLT?')        
         current = await self.send_command('SOUR:CURR?')    
 
+        # Make sure we got response from psu 
         if voltage == "ERR" or current == "ERR":
             return None
 
+        # Build response with all channels
         telemetry_dict = {
             'voltage': float(voltage),
             'current': float(current),

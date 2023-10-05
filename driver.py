@@ -6,28 +6,26 @@ from CommandServer import CommandServer
 
 # Constants
 BAUDRATE = 9600
-READ_BYTES = 128
-READ_FREQUENCY = 20
-BROADCAST_FREQUENCY = 10
-
+TELEMETRY_PORT = 8000
+COMMAND_PORT = 8001
 SERIAL_PORT = "/dev/cu.usbserial-A9VJRTLE"
         
 if __name__ == '__main__':    
 
     async def main():
+        # Initialize lock for power supply transactions
         lock = asyncio.Lock()
-        power_supply_comm = PowerSupplyComm(SERIAL_PORT, lock, baudrate=9600)
-        command_server = CommandServer(power_supply_comm)
-        telemetry_server = TelemetryServer(power_supply_comm)
+        power_supply_comm = PowerSupplyComm(SERIAL_PORT, lock, baudrate=BAUDRATE)
         await power_supply_comm.connect()
-                
-        loop = asyncio.get_event_loop()
-        
-        # Start telemetry server
-        telemetry_task = loop.create_task(telemetry_server.run(host="localhost", port=8000))
 
-        # Start command server
-        command_task = loop.create_task(command_server.run(host="localhost", port=8001))                    
+        # Initialize command & telemetry servers
+        command_server = CommandServer(power_supply_comm)
+        telemetry_server = TelemetryServer(power_supply_comm)                                
+        
+        # Start servers
+        loop = asyncio.get_event_loop()
+        telemetry_task = loop.create_task(telemetry_server.run(host="localhost", port=TELEMETRY_PORT))        
+        command_task = loop.create_task(command_server.run(host="localhost", port=COMMAND_PORT))                    
 
         await asyncio.gather(telemetry_task, command_task, return_exceptions=False)
     
