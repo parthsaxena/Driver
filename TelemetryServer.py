@@ -1,27 +1,27 @@
 import json
 import asyncio
 from PowerSupplyComm import PowerSupplyComm
+from termcolor import colored
 
 # Constants
 DATA_COLLECTION_FREQUENCY = 50
-BROADCAST_FREQUENCY = 10
+BROADCAST_FREQUENCY = 200
 
 class TelemetryServer:
     def __init__(self, power_supply_comm):
         self.power_supply_comm = power_supply_comm
-        self.clients = []
-        self.queue = asyncio.Queue()
+        self.clients = []        
 
     async def handle_client(self, reader, writer):
         self.clients.append(writer)
         addr = writer.get_extra_info('peername')
-        print(f'Telemetry server received connection from {addr}')
+        print(colored("[TelemetryServer]", 'red', attrs=['bold']), f'Telemetry server received connection from {addr}')
 
     async def collect_data(self):
         while True:
             telemetry_dict = await self.power_supply_comm.get_telemetry()
             await self.queue.put(telemetry_dict)
-            # print("collected data!")
+            # print(colored("[TelemetryServer]", 'red', attrs=['bold']), "collected data!")
             await asyncio.sleep(1 / DATA_COLLECTION_FREQUENCY)
 
     async def broadcast_telemetry(self):
@@ -49,7 +49,7 @@ class TelemetryServer:
                         client.write(telemetry_data.encode())
                         await client.drain()
                     except (ConnectionResetError, BrokenPipeError, OSError) as e:
-                        print(f"Telemetry client disconnected: {client.get_extra_info('peername')}")
+                        print(colored("[TelemetryServer]", 'red', attrs=['bold']), f"Telemetry client disconnected: {client.get_extra_info('peername')}")
                         disconnected_clients.append(client)
                 
                 # Remove each client that is disconnected
@@ -68,10 +68,14 @@ class TelemetryServer:
             self.handle_client, host, port
         )
 
-        # spawn data collectio & broadcast tasks
-        collection_task = asyncio.create_task(self.collect_data())
-        broadcast_task = asyncio.create_task(self.broadcast_telemetry())
+        loop = asyncio.get_event_loop()
+        self.queue = asyncio.Queue()
 
-        print(f'Telemetry server listening on {host}:{port}')
+        # spawn data collectio & broadcast tasks
+        collection_task = loop.create_task(self.collect_data())
+        broadcast_task = loop.create_task(self.broadcast_telemetry())
+
+        server_location = colored(f"{host}:{port}", 'white', 'on_red')
+        print(colored("[TelemetryServer]", 'red', attrs=['bold']), f'Telemetry server listening on {server_location}')
         async with server:
             await server.serve_forever()

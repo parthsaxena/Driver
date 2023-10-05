@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import time
+from termcolor import colored
 
 class TelemetryClient:
     def __init__(self, host, port):
@@ -31,7 +32,13 @@ class TelemetryClient:
                     start = end
                     average_latency = cumulative_latency / self.count
 
-                print(f'[{self.count}] {data.decode()}   Avg. Latency: {round(average_latency / (1e9), 2)}ms')                    
+                digits = 2
+                if (average_latency / (1e9)) < 0.01:
+                    digits = 3
+
+                prefix = colored(f'[{self.count}]', 'red', attrs=['bold', 'underline'])
+                latency = f'{colored("Avg. Latency:", "green")} {colored(str(round(average_latency / (1e9), digits)) + "ms", "green", attrs=["bold"])}'
+                print(f'{prefix} {data.decode()}   {latency}')                    
                 
         except asyncio.CancelledError:
             pass
