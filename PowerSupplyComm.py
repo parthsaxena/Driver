@@ -2,6 +2,8 @@ import asyncio
 import serial_asyncio
 from termcolor import colored
 
+TIMEOUT = 1.0
+
 class PowerSupplyComm:
     def __init__(self, port, lock, baudrate=9600, timeout=5):
         # config to communicate with serial port
@@ -45,18 +47,24 @@ class PowerSupplyComm:
             self.writer.write((command + '\n').encode())            
             await self.writer.drain()
                         
-            # read response from serial port
-            response = await self.reader.readline()            
-            return response.decode().strip()          
+            try:
+                response = await asyncio.wait_for(self.reader.readline(), timeout=TIMEOUT)
+                return response.decode().strip()
+            except Exception as e:
+                print(colored("[PowerSupplyComm]", 'cyan', attrs=['bold']), "Power supply didn't respond in time.")
+                return "ERR"        
     
     async def get_telemetry(self):
         """
         Retrieves telemetry data from power supply.
         Assumes SCPI commands 'SOUR:VOLT?' and 'SOUR:CURR?'
-        """        
+        """                
 
         voltage = await self.send_command('SOUR:VOLT?')        
         current = await self.send_command('SOUR:CURR?')    
+
+        if voltage == "ERR" or current == "ERR":
+            return None
 
         telemetry_dict = {
             'voltage': float(voltage),

@@ -20,8 +20,9 @@ class TelemetryServer:
     async def collect_data(self):
         while True:
             telemetry_dict = await self.power_supply_comm.get_telemetry()
-            await self.queue.put(telemetry_dict)
-            # print(colored("[TelemetryServer]", 'red', attrs=['bold']), "collected data!")
+            if telemetry_dict:
+                await self.queue.put(telemetry_dict)
+            
             await asyncio.sleep(1 / DATA_COLLECTION_FREQUENCY)
 
     async def broadcast_telemetry(self):
